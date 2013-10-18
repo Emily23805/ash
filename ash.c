@@ -19,12 +19,18 @@ static int background;
 static pid_t fg_pid;
 static pid_t pid_list[MAX_CHILDS] = {0};
 
-
+/**
+ * Signal handler for catching CTRL-C when a foreground process
+ * is running. Notice that we ignore CTRL-C at any other time.
+ */
 static void sigint_handler(int sig)
 {
 	kill(fg_pid, SIGKILL);
 }
 
+/**
+ * Kill all processes running in the backgound.
+ */
 static void kill_bg()
 {
 	int i, r, status;
@@ -87,6 +93,10 @@ static int remove_from_list(pid_t pid)
 	return 0;
 }
 
+/**
+ * Check status of all background processes and print
+ * their return value if they have exited.
+ */
 static int check_bg_status()
 {
 	int i;
@@ -199,6 +209,9 @@ int main(int argc, char* argv)
 						// TODO Check if this succeds
 						add_to_list(pid);
 
+						// Quickly check if the background process has already exited.
+						// The WNOHANG tells the system call to return imediately, and is returning
+						// the pid of the process if it has exited.
 						if (waitpid(pid, &status, WNOHANG) == pid)
 						{
 							printf("Background process %d exited\n", pid);
@@ -207,6 +220,7 @@ int main(int argc, char* argv)
 						else
 						{
 							// Background process still running
+							// TODO Do something?
 						}
 					}
 					// Or if the process should run in the foreground
