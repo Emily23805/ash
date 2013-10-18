@@ -15,26 +15,56 @@
 #define MAX_CHILDS	20
 #define MAX_LEN  255
 
-void endit(int sig);
-pid_t pid_list[MAX_CHILDS];
+static pid_t pid_list[MAX_CHILDS] = {0};
+
+static void sigint_handler(int sig)
+{
+	printf(" SIGINT\n");
+    //printf("\nOPS! - I got the killll signal %d\n", sig);
+    // TODO Close child running in foreground
+}
+
+static int get_next_avail_index()
+{
+	int i;
+	for (i = 0; i < MAX_CHILDS; i++)
+	{
+		if (pid_list[i] == 0) 
+		{
+			return i;
+		}
+	}
+	return -1;
+}
+
+static int add_to_list(pid_t pid)
+{
+	int idx = get_next_avail_index();
+	if (idx > -1)
+	{
+		pid_list[idx] = pid;
+	}
+	else
+	{
+		return -1;
+	}
+}
+
 
 int main(int argc, char* argv)
 {
-
 	char buffer[MAX_LEN];	 
 	char* list[MAX_LEN];
 	int background = 0;
 	
+	printf(" -- ASH - Awesome Shell --\n -- Copyright Jacob Pedersen & Andre Christensen 2013\n");
 
-	printf("-- ASH - Awesome Shell --\n-- Copyright Jacob Pedersen & Andre Christensen 2013\n");
-
-
-	signal(SIGINT, endit);  // signal killes all background processes if Ctrl+c is pressed. 
+	signal(SIGINT, sigint_handler);  // signal killes all background processes if Ctrl+c is pressed. 
 
 	while(1)
 	{
 		background = 0;
-		printf(">>");
+		printf(">> ");
 		
 		if (gets(buffer)!= NULL) 			// read input from the prom into a buffer.
 		{   
@@ -63,27 +93,38 @@ int main(int argc, char* argv)
 				list[i] = (char *)0;		// sets all the elements in the array to zero
 			}
 
-			pid_t pid = fork();				//fork a new process and get the pid
-			pid_list[0] = pid;
-
-			printf("pid = %d",pid_list[0]);
-			if (pid == 0)					// the childe				
+			if (strcmp(list[0], "exit") == 0)
 			{
-				char b[255];	
-				
-				if (execvp(list[0], list)==-1) // runs the commands and checks that the exe can be executed if not the execvp will retuen '-1'
+				// TODO Close all running childs
+				exit(0);
+			}
+			else if (strcmp(list[0], "killbg") == 0)
+			{
+				// TODO Kill all childs running in the background
+			}
+			else
+			{
+				pid_t pid = fork();				//fork a new process and get the pid
+				if (pid == 0)					// the childe				
 				{
-					perror("The following error occurred");	//prints a error massage to the promt.
-				}
-				exit(0); // the chiled will exit
-			} 
-			else   //the parent
-			{
-				if(background !=1)	// checks if the process should run in 'forground' or 'background'		
-				{	
-					int status;
-					waitpid(pid, &status, 0); //wait till the process have changed state
-					printf("%d pid exited with return value: %d\n ",pid, status); // printd the status and the pid to the promt.
+					char b[255];	
+					
+					if (execvp(list[0], list)==-1) // runs the commands and checks that the exe can be executed if not the execvp will retuen '-1'
+					{
+						perror("The following error occurred");	//prints a error massage to the promt.
+					}
+					exit(0); // the chiled will exit
+				} 
+				else   //the parent
+				{
+					printf("PID %d started\n", pid);
+
+					if(background !=1)	// checks if the process should run in 'forground' or 'background'		
+					{	
+						int status;
+						waitpid(pid, &status, 0); //wait till the process have changed state
+						printf("PID %dexited with return value: %d\n",pid, status); // printd the status and the pid to the promt.
+					}
 				}
 			}
 		}
@@ -92,10 +133,4 @@ int main(int argc, char* argv)
 }
 
 
-void endit(int sig)
-{
-    printf("\nOPS! - I got the killll signal %d\n", sig);
-    
-    pid_list[0]=NULL;
-    exit(0);
-}
+
