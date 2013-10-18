@@ -12,8 +12,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#define MAX_CHILDS	10
-
+#define MAX_CHILDS	99
 #define MAX_LEN  255
 
 void endit(int sig);
