@@ -15,28 +15,33 @@
 #define MAX_CHILDS	20
 #define MAX_LEN  255
 
+static int background;
+static pid_t fg_pid;
 static pid_t pid_list[MAX_CHILDS] = {0};
+
 
 static void sigint_handler(int sig)
 {
-	// Ignore
+	kill(fg_pid, SIGKILL);
 }
 
 static void kill_bg()
 {
-	int i, r;
+	int i, r, status;
 	for (i = 0; i < MAX_CHILDS; i++)
 	{	
 		if (pid_list[i] > 0)
 		{
-			r = kill(pid_list[i], SIGINT);
+			r = kill(pid_list[i], SIGKILL);
 			if (r < 0)
 			{
-				// ...
+				printf("Failed killing process %d\n", pid_list[i]);
 			}
 			else
 			{
-				printf("Killed process PID %d\n", pid_list[i]);
+				// Wait for the process to exit and print info
+				waitpid(pid_list[i], &status, 0);
+				printf("Killed (by sending SIGKILL) process %d - exited with %d\n", pid_list[i], status);
 			}
 			pid_list[i] = 0;
 		}
@@ -69,37 +74,73 @@ static int add_to_list(pid_t pid)
 	}
 }
 
+static int remove_from_list(pid_t pid)
+{
+	int i;
+	for (i = 0; i < MAX_CHILDS; i++)
+	{
+		if (pid_list[i] == pid)
+		{
+			pid_list[i] = 0;
+		}
+	}
+	return 0;
+}
+
+static int check_bg_status()
+{
+	int i;
+	int status;
+
+	for (i = 0; i < MAX_CHILDS; i++)
+	{
+		if (pid_list[i] > 0)
+		{
+			if (waitpid(pid_list[i], &status, WNOHANG) == pid_list[i])
+			{
+				// Child with PID `pid_list[i]` exited. Remove from list
+				printf("Background process %d exited with status %d\n", pid_list[i], status);
+				remove_from_list(pid_list[i]);
+			}
+		}
+	}
+}
+
 
 int main(int argc, char* argv)
 {
 	char buffer[MAX_LEN];	 
-	char* list[MAX_LEN];
-	int background = 0;
-	
-	printf(" -- ASH - Awesome Shell --\n -- Copyright Jacob Pedersen & Andre Christensen 2013\n");
+	char * list[MAX_LEN];
+	struct sigaction action;
 
-	// Attach a SIGINT handler
-	signal(SIGINT, sigint_handler); 
-
-	// Ignore children that exits in the background,
-	// and there by avoid them turning into zombies.
-	// http://man7.org/linux/man-pages/man2/waitpid.2.html
-	signal(SIGCHLD, SIG_IGN);
+	printf(" -- ASH - Awesome Shell -- \n -- Copyright Jacob Pedersen & Andre Christensen 2013\n");
 
 	while(1)
 	{
+		int i, status;
+		char * pch;
+
 		background = 0;
+
+		// Ignore Ctrl-C until a foreground process is started
+		action.sa_handler = SIG_IGN;
+		sigaction(SIGINT, &action, 0);
+
+		check_bg_status();
+
 		printf(">> ");
 		
-		if (gets(buffer)!= NULL) 			// read input from the prom into a buffer.
+		// Read input from the prom into a buffer.
+		if (gets(buffer)!= NULL) 			
 		{   
-			if(strlen(buffer)<1)  			//checks if there is text in the promt.
+			// Checks if there is text in the promt.
+			if(strlen(buffer) < 1)  			
 			{
-				continue;					// if there is no text in the promt do nothing and get ready for the next command
+				// If there is no text in the promt do nothing and get ready for the next command
+				continue;					
 			}
 
-			int i = 0;
-			char* pch;
+			i = 0;
 			pch = strtok(buffer, " ");	 	//splits the string into tokens. 
 
 			while (pch != NULL)		 		// loops until the last token
@@ -108,16 +149,19 @@ int main(int argc, char* argv)
 				pch = strtok(NULL, " "); 	// zeros the pch.
 			}	
 
-			if(strcmp(list[i-1],"&")== 0) 	// compair the last torkens in the list with '&' 
+			if(strcmp(list[i-1], "&") == 0) 	// compair the last torkens in the list with '&' 
 			{
 				background = 1;				//sets the background flag to '1'
 				list[i-1] = 0;				//remove the '&' from the list array again
 			}
 			else
 			{
-				list[i] = (char *)0;		// sets all the elements in the array to zero
+				list[i] = (char *) 0;	
 			}
 
+			//
+			// Check for built-in commands.
+			//
 			if (strcmp(list[0], "exit") == 0)
 			{
 				exit(0);
@@ -126,28 +170,59 @@ int main(int argc, char* argv)
 			{
 				kill_bg();
 			}
+			//
+			// Or fork a new child and execute the requested command
+			//
 			else
 			{
-				pid_t pid = fork();				//fork a new process and get the pid
-				add_to_list(pid);
-				if (pid == 0)					// the childe				
+				// Fork a new process and get the pid
+				pid_t pid = fork();				
+				// The child
+				if (pid == 0)
 				{
-					setpgid(pid, pid);
-					if (execvp(list[0], list) == -1) // runs the commands and checks that the exe can be executed if not the execvp will retuen '-1'
+					//setpgid(pid, pid);
+					// ?? Runs the commands and checks that the exe can be executed if not the execvp will retuen '-1'
+					if (execvp(list[0], list) == -1) 
 					{
-						perror("The following error occurred");	//prints a error massage to the promt.
+						perror("The following error occurred");	// ?? prints a error massage to the promt.
 					}
-					exit(0); // the chiled will exit
+					exit(0); // ?? the chiled will exit
 				} 
-				else   //the parent
+				// The parent
+				else 
 				{
 					printf("PID %d started (%s)\n", pid, (background != 1) ? "foreground" : "background");
 
-					if(background != 1)	// checks if the process should run in 'forground' or 'background'		
+					// If the process should run in the background
+					if(background == 1)
+					{
+						// TODO Check if this succeds
+						add_to_list(pid);
+
+						if (waitpid(pid, &status, WNOHANG) == pid)
+						{
+							printf("Background process %d exited\n", pid);
+							remove_from_list(pid);
+						}
+						else
+						{
+							// Background process still running
+						}
+					}
+					// Or if the process should run in the foreground
+					else
 					{	
-						int status;
-						waitpid(pid, &status, 0); //wait till the process have changed state
-						printf("PID %d exited with return value: %d\n", pid, status); // printd the status and the pid to the promt.
+						fg_pid = pid;
+
+						// Catch CTRL-C signals
+						action.sa_handler = sigint_handler;
+						sigaction(SIGINT, &action, 0);
+
+						// Wait till the process have changed state
+						waitpid(fg_pid, &status, 0); 
+
+						// TODO Check what caused the child to exit (exit, signals, etc.)
+						printf("PID %d exited with return value: %d\n", pid, status); 
 					}
 				}
 			}
