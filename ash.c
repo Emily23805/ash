@@ -13,7 +13,6 @@
 #include <unistd.h>
 
 #define MAX_CHILDS	20
-
 #define MAX_LEN  255
 
 void endit(int sig);
@@ -99,5 +98,4 @@ void endit(int sig)
     
     pid_list[0]=NULL;
     exit(0);
-    
 }
