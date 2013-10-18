@@ -12,11 +12,12 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#define MAX_CHILDS	10
 
 #define MAX_LEN  255
 
 void endit(int sig);
-pid_t pid_list[20];
+pid_t pid_list[MAX_CHILDS];
 
 int main(int argc, char* argv)
 {
