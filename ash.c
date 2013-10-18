@@ -12,7 +12,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#define MAX_CHILDS	10
+#define MAX_CHILDS	20
 
 #define MAX_LEN  255
 
