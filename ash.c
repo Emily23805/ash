@@ -1,7 +1,7 @@
 //
 //  
 //
-//	Copyright (C) Jacob Friis Pdersen & Andre Daniel Christensen DTU 7.okt 2013
+//	Copyright (C) Jacob Friis Pedersen & Andre Daniel Christensen DTU 7.okt 2013
 //  This is a home made shell with some basic functions.  
 //
 //---------------------------------------------------------------------------------------------------------------
@@ -19,9 +19,28 @@ static pid_t pid_list[MAX_CHILDS] = {0};
 
 static void sigint_handler(int sig)
 {
-	printf(" SIGINT\n");
-    //printf("\nOPS! - I got the killll signal %d\n", sig);
-    // TODO Close child running in foreground
+	// Ignore
+}
+
+static void kill_bg()
+{
+	int i, r;
+	for (i = 0; i < MAX_CHILDS; i++)
+	{	
+		if (pid_list[i] > 0)
+		{
+			r = kill(pid_list[i], SIGINT);
+			if (r < 0)
+			{
+				// ...
+			}
+			else
+			{
+				printf("Killed process PID %d\n", pid_list[i]);
+			}
+			pid_list[i] = 0;
+		}
+	}
 }
 
 static int get_next_avail_index()
@@ -59,7 +78,13 @@ int main(int argc, char* argv)
 	
 	printf(" -- ASH - Awesome Shell --\n -- Copyright Jacob Pedersen & Andre Christensen 2013\n");
 
-	signal(SIGINT, sigint_handler);  // signal killes all background processes if Ctrl+c is pressed. 
+	// Attach a SIGINT handler
+	signal(SIGINT, sigint_handler); 
+
+	// Ignore children that exits in the background,
+	// and there by avoid them turning into zombies.
+	// http://man7.org/linux/man-pages/man2/waitpid.2.html
+	signal(SIGCHLD, SIG_IGN);
 
 	while(1)
 	{
@@ -95,21 +120,20 @@ int main(int argc, char* argv)
 
 			if (strcmp(list[0], "exit") == 0)
 			{
-				// TODO Close all running childs
 				exit(0);
 			}
 			else if (strcmp(list[0], "killbg") == 0)
 			{
-				// TODO Kill all childs running in the background
+				kill_bg();
 			}
 			else
 			{
 				pid_t pid = fork();				//fork a new process and get the pid
+				add_to_list(pid);
 				if (pid == 0)					// the childe				
 				{
-					char b[255];	
-					
-					if (execvp(list[0], list)==-1) // runs the commands and checks that the exe can be executed if not the execvp will retuen '-1'
+					setpgid(pid, pid);
+					if (execvp(list[0], list) == -1) // runs the commands and checks that the exe can be executed if not the execvp will retuen '-1'
 					{
 						perror("The following error occurred");	//prints a error massage to the promt.
 					}
@@ -117,13 +141,13 @@ int main(int argc, char* argv)
 				} 
 				else   //the parent
 				{
-					printf("PID %d started\n", pid);
+					printf("PID %d started (%s)\n", pid, (background != 1) ? "foreground" : "background");
 
-					if(background !=1)	// checks if the process should run in 'forground' or 'background'		
+					if(background != 1)	// checks if the process should run in 'forground' or 'background'		
 					{	
 						int status;
 						waitpid(pid, &status, 0); //wait till the process have changed state
-						printf("PID %dexited with return value: %d\n",pid, status); // printd the status and the pid to the promt.
+						printf("PID %d exited with return value: %d\n", pid, status); // printd the status and the pid to the promt.
 					}
 				}
 			}
