@@ -98,5 +98,5 @@ void endit(int sig)
     
     pid_list[0]=NULL;
     exit(0);
-    
+    //patter(.)(.) - - - <==8
 }
