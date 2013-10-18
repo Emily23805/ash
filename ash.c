@@ -1,7 +1,7 @@
 //
 //  
 //
-//	Copyright Jacob Friis Pdersen & Andre Daniel Christensen DTU 7.okt 2013
+//	Copyright (C) Jacob Friis Pdersen & Andre Daniel Christensen DTU 7.okt 2013
 //  This is a home made shell with some basic functions.  
 //
 //---------------------------------------------------------------------------------------------------------------
