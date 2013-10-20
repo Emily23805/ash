@@ -1,10 +1,17 @@
-//
-//  
-//
-//	Copyright (C) Jacob Friis Pedersen & Andre Daniel Christensen DTU 7.okt 2013
-//  This is a home made shell with some basic functions.  
-//
-//---------------------------------------------------------------------------------------------------------------
+/**
+ * 
+ * Awesome SHell - ASH 
+ * 
+ * Copyright (C) Jacob Aslund Friis Pedersen & Andre Daniel Christensen 
+ * Technical University of Denmark - DTU
+ *
+ * ASH is a simple shell. It A process can be started in the background
+ * by appending a & to the command. ASH has two built-in commands; killbg
+ * which kills all processes running in the background, and exit which exits
+ * ASH and returns to the 'real' shell.
+ *
+ */
+
 #include <signal.h>
 #include <stdio.h>
 #include <string.h>
@@ -12,8 +19,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#define MAX_CHILDS	20
-#define MAX_LEN  255
+#define MAX_CHILDS		20
+#define MAX_LEN  		255
 
 static int background;
 static pid_t fg_pid;
@@ -22,6 +29,8 @@ static pid_t pid_list[MAX_CHILDS] = {0};
 /**
  * Signal handler for catching CTRL-C when a foreground process
  * is running. Notice that we ignore CTRL-C at any other time.
+ * 
+ * \param sig The signal number
  */
 static void sigint_handler(int sig)
 {
@@ -54,6 +63,12 @@ static void kill_bg()
 	}
 }
 
+/**
+ * Finds the index of the next available spot in the list of
+ * processes running in the background.
+ *
+ * \return Index of the next available spot, or -1 if the list is full
+ */
 static int get_next_avail_index()
 {
 	int i;
@@ -67,6 +82,13 @@ static int get_next_avail_index()
 	return -1;
 }
 
+/**
+ * Add `pid` to the list of PIDs for processes running
+ * in the background.
+ *
+ * \param pid The PIP of the child
+ * \return 0 on success, or -1 if if the PID could not be added to the list
+ */
 static int add_to_list(pid_t pid)
 {
 	int idx = get_next_avail_index();
@@ -78,9 +100,16 @@ static int add_to_list(pid_t pid)
 	{
 		return -1;
 	}
+	return 0;
 }
 
-static int remove_from_list(pid_t pid)
+/**
+ * Remove the `pid` from the list of processes running in the background. 
+ * The function doesn't return anything as we don't care about the result.
+ *
+ * \param pid PID to remove from the list
+ */
+static void remove_from_list(pid_t pid)
 {
 	int i;
 	for (i = 0; i < MAX_CHILDS; i++)
@@ -90,14 +119,13 @@ static int remove_from_list(pid_t pid)
 			pid_list[i] = 0;
 		}
 	}
-	return 0;
 }
 
 /**
  * Check status of all background processes and print
  * their return value if they have exited.
  */
-static int check_bg_status()
+static void check_bg_status()
 {
 	int i;
 	int status;
@@ -116,8 +144,10 @@ static int check_bg_status()
 	}
 }
 
-
-int main(int argc, char* argv)
+/**
+ * Main
+ */
+int main(int argc, char ** argv)
 {
 	char buffer[MAX_LEN];	 
 	char * list[MAX_LEN];
@@ -141,28 +171,41 @@ int main(int argc, char* argv)
 		printf(">> ");
 		
 		// Read input from the prom into a buffer.
-		if (gets(buffer)!= NULL) 			
+		if (fgets(buffer, MAX_LEN, stdin) != NULL) 			
 		{   
-			// Checks if there is text in the promt.
-			if(strlen(buffer) < 1)  			
+			// Skip empty string (check string termination and newline)
+			if (*buffer == '\0' || *buffer == '\n')
 			{
-				// If there is no text in the promt do nothing and get ready for the next command
-				continue;					
+				continue;
 			}
 
-			i = 0;
-			pch = strtok(buffer, " ");	 	//splits the string into tokens. 
+			// Remove newline at the end of the command
+			for (i = 0; i < MAX_LEN; i++)
+			{
+				if (buffer[i] == '\n')
+				{
+					buffer[i] = '\0';
+				}
+			}
 
-			while (pch != NULL)		 		// loops until the last token
+
+			// Splits the string into tokens. 
+			i = 0;
+			pch = strtok(buffer, " ");	 	
+
+			// Loops until the last token
+			while (pch != NULL)		 		
 			{	
-				list[i++] = pch; 			// puts all the tokens into an array  
-				pch = strtok(NULL, " "); 	// zeros the pch.
+				list[i++] = pch; 			
+				pch = strtok(NULL, " "); 
 			}	
 
-			if(strcmp(list[i-1], "&") == 0) 	// compair the last torkens in the list with '&' 
+			// Check the last token for '&' which indicates the process
+			// should run in the background
+			if(strcmp(list[i-1], "&") == 0) 	
 			{
-				background = 1;				//sets the background flag to '1'
-				list[i-1] = 0;				//remove the '&' from the list array again
+				background = 1;				
+				list[i-1] = 0;	
 			}
 			else
 			{
@@ -190,13 +233,11 @@ int main(int argc, char* argv)
 				// The child
 				if (pid == 0)
 				{
-					//setpgid(pid, pid);
-					// ?? Runs the commands and checks that the exe can be executed if not the execvp will retuen '-1'
 					if (execvp(list[0], list) == -1) 
 					{
-						perror("The following error occurred");	// ?? prints a error massage to the promt.
+						perror("The following error occurred");	
 					}
-					exit(0); // ?? the chiled will exit
+					exit(0); 
 				} 
 				// The parent
 				else 
@@ -220,7 +261,6 @@ int main(int argc, char* argv)
 						else
 						{
 							// Background process still running
-							// TODO Do something?
 						}
 					}
 					// Or if the process should run in the foreground
@@ -235,7 +275,6 @@ int main(int argc, char* argv)
 						// Wait till the process have changed state
 						waitpid(fg_pid, &status, 0); 
 
-						// TODO Check what caused the child to exit (exit, signals, etc.)
 						printf("PID %d exited with return value: %d\n", pid, status); 
 					}
 				}
