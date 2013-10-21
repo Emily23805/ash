@@ -29,6 +29,8 @@ static int background;
 static pid_t fg_pid;
 static pid_t pid_list[MAX_CHILDS] = {0};
 
+static void check_bg_status();
+
 /**
  * Signal handler for catching CTRL-C when a foreground process
  * is running. Notice that we ignore CTRL-C at any other time.
@@ -38,6 +40,17 @@ static pid_t pid_list[MAX_CHILDS] = {0};
 static void sigint_handler(int sig)
 {
 	kill(fg_pid, SIGKILL);
+}
+
+/**
+ * Signal handler for SIGCHLD. Checks the status of all background
+ * processes when a SIGCHILD is received.
+ * 
+ * \param sig The signal number
+ */
+static void sigchld_handler(int sig)
+{
+	check_bg_status();
 }
 
 /**
@@ -59,7 +72,7 @@ static void kill_bg()
 			{
 				// Wait for the process to exit and print info
 				waitpid(pid_list[i], &status, 0);
-				printf("Killed (by sending SIGKILL) process %d - exited with %d\n", pid_list[i], status);
+				printf("Killed process %d - exited with %d\n", pid_list[i], status);
 			}
 			pid_list[i] = 0;
 		}
@@ -140,7 +153,9 @@ static void check_bg_status()
 			if (waitpid(pid_list[i], &status, WNOHANG) == pid_list[i])
 			{
 				// Child with PID `pid_list[i]` exited. Remove from list
-				printf("Background process %d exited with status %d\n", pid_list[i], status);
+				printf("\nBackground process %d exited with status %d\n>> ", pid_list[i], status);
+				fflush(stdout);
+
 				remove_from_list(pid_list[i]);
 			}
 		}
@@ -158,6 +173,9 @@ int main(int argc, char ** argv)
 
 	printf(" -- ASH - Awesome Shell -- \n -- Copyright Jacob Pedersen & Andre Christensen 2013\n");
 
+	// Handle child process termination
+	signal(SIGCHLD, sigchld_handler);
+
 	while(1)
 	{
 		int i, status;
@@ -169,7 +187,7 @@ int main(int argc, char ** argv)
 		action.sa_handler = SIG_IGN;
 		sigaction(SIGINT, &action, 0);
 
-		check_bg_status();
+		//check_bg_status();
 
 		printf(">> ");
 		
