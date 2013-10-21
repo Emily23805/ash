@@ -1,6 +1,7 @@
 /**
  * 
  * Awesome SHell - ASH 
+ * http://github.com/bomstrong/ash
  * 
  * Copyright (C) Jacob Aslund Friis Pedersen & Andre Daniel Christensen 
  * Technical University of Denmark - DTU
