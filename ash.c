@@ -72,7 +72,8 @@ static void kill_bg()
 			{
 				// Wait for the process to exit and print info
 				waitpid(pid_list[i], &status, 0);
-				printf("Killed process %d - exited with %d\n", pid_list[i], status);
+				printf("Killed process %d - exited with %d\n", pid_list[i], 
+					status);
 			}
 			pid_list[i] = 0;
 		}
@@ -153,7 +154,8 @@ static void check_bg_status()
 			if (waitpid(pid_list[i], &status, WNOHANG) == pid_list[i])
 			{
 				// Child with PID `pid_list[i]` exited. Remove from list
-				printf("\nBackground process %d exited with status %d\n>> ", pid_list[i], status);
+				printf("\nBackground process %d exited with status %d\n>> ", 
+					pid_list[i], status);
 				fflush(stdout);
 
 				remove_from_list(pid_list[i]);
@@ -171,7 +173,8 @@ int main(int argc, char ** argv)
 	char * list[MAX_LEN];
 	struct sigaction action;
 
-	printf(" -- ASH - Awesome Shell -- \n -- Copyright Jacob Pedersen & Andre Christensen 2013\n");
+	printf(" -- ASH - Awesome Shell -- \n");
+	printf(" -- Copyright Jacob Pedersen & Andre Christensen 2013\n");
 
 	// Handle child process termination
 	signal(SIGCHLD, sigchld_handler);
@@ -263,7 +266,8 @@ int main(int argc, char ** argv)
 				// The parent
 				else 
 				{
-					printf("PID %d started (%s)\n", pid, (background != 1) ? "foreground" : "background");
+					printf("PID %d started (%s)\n", pid, (background != 1) 
+						? "foreground" : "background");
 
 					// If the process should run in the background
 					if(background == 1)
@@ -271,9 +275,10 @@ int main(int argc, char ** argv)
 						// TODO Check if this succeds
 						add_to_list(pid);
 
-						// Quickly check if the background process has already exited.
-						// The WNOHANG tells the system call to return imediately, and is returning
-						// the pid of the process if it has exited.
+						// Quickly check if the background process has already 
+						// exited. The WNOHANG tells the system call to return 
+						// immediately, and is returning the pid of the process 
+						// if it has exited.
 						if (waitpid(pid, &status, WNOHANG) == pid)
 						{
 							printf("Background process %d exited\n", pid);
@@ -296,7 +301,8 @@ int main(int argc, char ** argv)
 						// Wait till the process have changed state
 						waitpid(fg_pid, &status, 0); 
 
-						printf("PID %d exited with return value: %d\n", pid, status); 
+						printf("PID %d exited with return value: %d\n", pid, 
+							status); 
 					}
 				}
 			}
