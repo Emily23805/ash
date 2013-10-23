@@ -10,12 +10,14 @@
 \lstset{ 
   basicstyle=\scriptsize,
   breaklines=true,
-  showstringspaces=false
+  showstringspaces=false,
+  numbers=left,
+  tabsize=3
 }
 \parindent=0pt
 
 \title{A Simple Linux Shell - ASH (Awesome SHell)}
-\author{Andre Christensen (110033) og Jacob Pedersen (120374)}
+\author{Andre Christensen (110033) and Jacob Pedersen (120374)}
 
 \begin{document}
 
@@ -41,7 +43,7 @@ ASH contains the following features:
 
 \section{Implementation details}
 
-ASH is capable of executing commands in both the foreground and in the background. Every command in read from the \emph{stdin} and parsed into tokens seperated by spaces. A `run-in-background` flag is set, if the character `\&` is appended at the end of the command.\\
+ASH is capable of executing commands in both the foreground and in the background. Every command is read from the \emph{stdin} and parsed into tokens seperated by spaces. A `run-in-background` flag is set, if the character `\&` is appended at the end of the command.\\
 
 After the command has been read a new child is forked, and depending on the type of process (foreground or background) the shell waits for the PID to exit, or becomes ready to accept a new command from the user.\\
 
@@ -49,7 +51,6 @@ ASH keeps track of background processes, by keeping their PID's in an array. The
 
 
 \section{Testing}
-
 Figure \ref{fig:1} shows a screenshot of a testrun. The screenshots shows the following:
 
 \begin{itemize}
